@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>API Documentation — Pokedex API</title>
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <header>
+    <h1>API Documentation</h1>
+    <nav>
+      <a href="/">Browse</a>
+      <a href="/docs">API Docs</a>
+    </nav>
+  </header>
+
+  <main>
+
+    <section>
+      <h2>Overview</h2>
+      <p>
+        All data endpoints return <code>application/json</code> by default.
+        Every response includes <code>Content-Type</code> and <code>Content-Length</code> headers.
+        All GET endpoints also support HEAD (same headers, no body).
+      </p>
+    </section>
+
+    <section>
+      <h2>Endpoints</h2>
+
+      <!-- GET /api/pokemon -->
+      <div class="endpoint">
+        <h3>/api/pokemon</h3>
+        <span class="method get">GET</span>
+        <span class="method head">HEAD</span>
+        <p>Returns all pokemon. Supports filtering via query parameters.</p>
+
+        <table>
+          <thead><tr><th>Query Param</th><th>Type</th><th>Required</th><th>Description</th></tr></thead>
+          <tbody>
+            <tr><td>type</td><td>string</td><td>optional</td><td>Filter to pokemon that include this type (case-insensitive). e.g. <code>Fire</code></td></tr>
+            <tr><td>weakness</td><td>string</td><td>optional</td><td>Filter to pokemon that have this weakness (case-insensitive). e.g. <code>Water</code></td></tr>
+            <tr><td>limit</td><td>number</td><td>optional</td><td>Maximum number of results to return.</td></tr>
+          </tbody>
+        </table>
+
+        <p><strong>Returns:</strong> <code>{ count: number, pokemon: Pokemon[] }</code></p>
+        <pre>GET /api/pokemon?type=Fire&amp;limit=3
+
+{
+  "count": 3,
+  "pokemon": [
+    { "id": 4, "num": "004", "name": "Charmander", "type": ["Fire"], ... },
+    ...
+  ]
+}</pre>
+      </div>
+
+      <!-- GET /api/pokemon/:id -->
+      <div class="endpoint">
+        <h3>/api/pokemon/:id</h3>
+        <span class="method get">GET</span>
+        <span class="method head">HEAD</span>
+        <p>Returns a single pokemon by numeric id or zero-padded num string.</p>
+
+        <table>
+          <thead><tr><th>URL Param</th><th>Type</th><th>Required</th><th>Description</th></tr></thead>
+          <tbody>
+            <tr><td>:id</td><td>number or string</td><td>required</td><td>Numeric id (e.g. <code>25</code>) or num string (e.g. <code>025</code>)</td></tr>
+          </tbody>
+        </table>
+
+        <p><strong>Returns:</strong> A single <code>Pokemon</code> object. <code>404</code> if not found.</p>
+        <pre>GET /api/pokemon/25
+
+{ "id": 25, "num": "025", "name": "Pikachu", "type": ["Electric"], ... }</pre>
+      </div>
+
+      <!-- GET /api/types -->
+      <div class="endpoint">
+        <h3>/api/types</h3>
+        <span class="method get">GET</span>
+        <span class="method head">HEAD</span>
+        <p>Returns all unique pokemon types present in the dataset, sorted alphabetically.</p>
+
+        <p><strong>Returns:</strong> <code>{ types: string[] }</code></p>
+        <pre>GET /api/types
+
+{ "types": ["Bug", "Dragon", "Electric", "Fighting", "Fire", ...] }</pre>
+      </div>
+
+      <!-- GET /api/weaknesses -->
+      <div class="endpoint">
+        <h3>/api/weaknesses</h3>
+        <span class="method get">GET</span>
+        <span class="method head">HEAD</span>
+        <p>Returns all unique pokemon weaknesses present in the dataset, sorted alphabetically.</p>
+
+        <p><strong>Returns:</strong> <code>{ weaknesses: string[] }</code></p>
+        <pre>GET /api/weaknesses
+
+{ "weaknesses": ["Bug", "Dark", "Electric", "Fighting", "Fire", ...] }</pre>
+      </div>
+
+      <!-- POST /api/pokemon -->
+      <div class="endpoint">
+        <h3>/api/pokemon</h3>
+        <span class="method post">POST</span>
+        <p>Adds a new pokemon to the in-memory dataset. Data persists until the server restarts.</p>
+        <p>Accepts <code>application/json</code> or <code>application/x-www-form-urlencoded</code> (parsed based on <code>Content-Type</code>).</p>
+        <p>For form-urlencoded, <code>type</code> and <code>weaknesses</code> should be comma-separated strings.</p>
+
+        <table>
+          <thead><tr><th>Body Param</th><th>Type</th><th>Required</th><th>Description</th></tr></thead>
+          <tbody>
+            <tr><td>name</td><td>string</td><td>required</td><td>Pokemon name</td></tr>
+            <tr><td>type</td><td>string[]</td><td>required</td><td>Array of type strings (e.g. <code>["Fire"]</code>)</td></tr>
+            <tr><td>height</td><td>string</td><td>optional</td><td>Height string (e.g. <code>"0.40 m"</code>)</td></tr>
+            <tr><td>weight</td><td>string</td><td>optional</td><td>Weight string (e.g. <code>"6.0 kg"</code>)</td></tr>
+            <tr><td>weaknesses</td><td>string[]</td><td>optional</td><td>Array of weakness type strings</td></tr>
+            <tr><td>img</td><td>string</td><td>optional</td><td>URL to pokemon image</td></tr>
+          </tbody>
+        </table>
+
+        <p><strong>Returns:</strong> <code>201</code> with the created Pokemon object. <code>400</code> if required fields are missing.</p>
+        <pre>POST /api/pokemon
+Content-Type: application/json
+
+{ "name": "Eevee", "type": ["Normal"], "height": "0.30 m", "weight": "6.5 kg" }
+
+→ 201
+{ "id": 152, "num": "152", "name": "Eevee", "type": ["Normal"], ... }</pre>
+      </div>
+
+      <!-- POST /api/pokemon/update -->
+      <div class="endpoint">
+        <h3>/api/pokemon/update</h3>
+        <span class="method post">POST</span>
+        <p>Updates one or more fields on an existing pokemon identified by <code>id</code>.</p>
+        <p>Accepts <code>application/json</code> or <code>application/x-www-form-urlencoded</code>.</p>
+        <p>Only fields present in the body are updated — omitted fields are left unchanged.</p>
+
+        <table>
+          <thead><tr><th>Body Param</th><th>Type</th><th>Required</th><th>Description</th></tr></thead>
+          <tbody>
+            <tr><td>id</td><td>number</td><td>required</td><td>Numeric id of the pokemon to update</td></tr>
+            <tr><td>name</td><td>string</td><td>optional</td><td>New name</td></tr>
+            <tr><td>type</td><td>string[]</td><td>optional</td><td>New type array</td></tr>
+            <tr><td>height</td><td>string</td><td>optional</td><td>New height</td></tr>
+            <tr><td>weight</td><td>string</td><td>optional</td><td>New weight</td></tr>
+            <tr><td>weaknesses</td><td>string[]</td><td>optional</td><td>New weaknesses array</td></tr>
+            <tr><td>img</td><td>string</td><td>optional</td><td>New image URL</td></tr>
+          </tbody>
+        </table>
+
+        <p><strong>Returns:</strong> <code>204</code> No Content on success. <code>400</code> if <code>id</code> is missing. <code>404</code> if no pokemon has that id.</p>
+        <pre>POST /api/pokemon/update
+Content-Type: application/json
+
+{ "id": 25, "name": "Raichu" }
+
+→ 204 (no body)</pre>
+      </div>
+
+    </section>
+
+    <section>
+      <h2>Pokemon Object Shape</h2>
+      <pre>{
+  "id":           number,    // numeric id (1+)
+  "num":          string,    // zero-padded string, e.g. "025"
+  "name":         string,
+  "img":          string,    // image URL (may be empty for user-added pokemon)
+  "type":         string[],  // e.g. ["Electric"]
+  "height":       string,    // e.g. "0.40 m"
+  "weight":       string,    // e.g. "6.0 kg"
+  "weaknesses":   string[],  // e.g. ["Ground"]
+  "next_evolution": [        // empty array if final form
+    { "num": string, "name": string }
+  ],
+  "prev_evolution": [        // present on evolved forms only
+    { "num": string, "name": string }
+  ]
+}</pre>
+    </section>
+
+  </main>
+</body>
+</html>

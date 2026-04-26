@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pokedex API</title>
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <header>
+    <h1>Pokedex API</h1>
+    <nav>
+      <a href="/">Browse</a>
+      <a href="/docs">API Docs</a>
+    </nav>
+  </header>
+
+  <main>
+
+    <!-- Filter / Browse -->
+    <section>
+      <h2>Browse Pokemon</h2>
+      <form id="filter-form">
+        <div class="filter-row">
+          <label>
+            Type
+            <select id="filter-type">
+              <option value="">Any</option>
+            </select>
+          </label>
+          <label>
+            Weakness
+            <select id="filter-weakness">
+              <option value="">Any</option>
+            </select>
+          </label>
+          <label>
+            Limit
+            <input type="number" id="filter-limit" min="1" max="151" placeholder="All" />
+          </label>
+          <button type="submit">Search</button>
+          <button type="button" id="filter-clear" class="secondary">Clear</button>
+        </div>
+      </form>
+      <div id="results"></div>
+    </section>
+
+    <!-- Add Pokemon -->
+    <section>
+      <h2>Add a Pokemon</h2>
+      <form id="add-form">
+        <div class="form-grid">
+          <label>
+            Name *
+            <input type="text" id="add-name" required placeholder="Pikachu" />
+          </label>
+          <label>
+            Type(s) *
+            <input type="text" id="add-type" required placeholder="Electric" />
+            <span class="form-hint">Comma-separated (e.g. Fire, Flying)</span>
+          </label>
+          <label>
+            Height
+            <input type="text" id="add-height" placeholder="0.40 m" />
+          </label>
+          <label>
+            Weight
+            <input type="text" id="add-weight" placeholder="6.0 kg" />
+          </label>
+          <label>
+            Weaknesses
+            <input type="text" id="add-weaknesses" placeholder="Ground" />
+            <span class="form-hint">Comma-separated</span>
+          </label>
+        </div>
+        <button type="submit">Add Pokemon</button>
+        <p id="add-msg" class="msg"></p>
+      </form>
+    </section>
+
+    <!-- Update Pokemon -->
+    <section>
+      <h2>Update a Pokemon</h2>
+      <form id="update-form">
+        <div class="form-grid">
+          <label>
+            Pokemon ID *
+            <input type="number" id="update-id" required min="1" placeholder="25" />
+          </label>
+          <label>
+            New Name
+            <input type="text" id="update-name" placeholder="Leave blank to keep" />
+          </label>
+          <label>
+            New Type(s)
+            <input type="text" id="update-type" placeholder="Leave blank to keep" />
+            <span class="form-hint">Comma-separated</span>
+          </label>
+          <label>
+            New Height
+            <input type="text" id="update-height" placeholder="Leave blank to keep" />
+          </label>
+          <label>
+            New Weight
+            <input type="text" id="update-weight" placeholder="Leave blank to keep" />
+          </label>
+        </div>
+        <button type="submit">Update Pokemon</button>
+        <p id="update-msg" class="msg"></p>
+      </form>
+    </section>
+
+  </main>
+
+  <script src="/main.js"></script>
+</body>
+</html>
