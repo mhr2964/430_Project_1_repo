@@ -11,11 +11,14 @@ const filterLimitEl = document.getElementById('filter-limit');
 const addMsgEl = document.getElementById('add-msg');
 const updateMsgEl = document.getElementById('update-msg');
 const updateFieldsEl = document.getElementById('update-fields');
+const updateImgActionsEl = document.getElementById('update-img-actions');
 const updateSubmitEl = document.getElementById('update-submit');
 
 const PAGE_SIZE = 20;
 let allResults = [];
 let currentPage = 0;
+let currentParams = {};  // last-used filter params — used to refresh after add/update
+let pickerTarget = null; // 'add' or 'update' — which form opened the image picker
 
 /** Escapes HTML special characters to prevent XSS when interpolating into innerHTML. */
 const esc = (str) => String(str)
@@ -51,6 +54,114 @@ const typeTag = (t) => {
   const color = TYPE_COLORS[t] || { bg: '#718096', text: '#fff' };
   return `<span class="type-badge" style="background:${color.bg};color:${color.text}">${esc(t)}</span>`;
 };
+
+// ─── Image preview ────────────────────────────────────────────────────────────
+
+/** Shows or hides the image preview for a form (add or update). */
+const updatePreview = (prefix, url) => {
+  const el = document.getElementById(`${prefix}-img-preview`);
+  if (url) {
+    el.src = url;
+    el.hidden = false;
+  } else {
+    el.hidden = true;
+    el.src = '';
+  }
+};
+
+// Keep preview in sync when user types into the URL field
+['add', 'update'].forEach((prefix) => {
+  document.getElementById(`${prefix}-img`).addEventListener('input', (e) => {
+    updatePreview(prefix, e.target.value.trim());
+  });
+});
+
+// ─── Image picker modal ────────────────────────────────────────────────────────
+
+const pickerDialog = document.getElementById('img-picker');
+const pickerGrid = document.getElementById('picker-grid');
+const pickerSearch = document.getElementById('picker-search');
+
+/** Selects an image URL from the picker and sends it to the correct form. */
+const selectImage = (url) => {
+  document.getElementById(`${pickerTarget}-img`).value = url;
+  updatePreview(pickerTarget, url);
+  pickerDialog.close();
+};
+
+/** Opens the image picker, populating it from the current pokemon dataset. */
+const openPicker = async () => {
+  pickerGrid.innerHTML = '<p style="padding:1rem;color:#718096">Loading sprites…</p>';
+  pickerSearch.value = '';
+  pickerDialog.showModal();
+
+  try {
+    const res = await fetch('/api/pokemon', { headers: { Accept: 'application/json' } });
+    const data = await res.json();
+    const withImages = data.pokemon.filter((p) => p.img);
+
+    pickerGrid.innerHTML = withImages.map((p) => `
+      <button type="button" class="picker-item" data-url="${esc(p.img)}" title="${esc(p.name)}">
+        <img src="${esc(p.img)}" alt="${esc(p.name)}" onerror="this.parentElement.style.display='none'" />
+        <span>${esc(p.name)}</span>
+      </button>
+    `).join('');
+
+    pickerGrid.querySelectorAll('.picker-item').forEach((btn) => {
+      btn.addEventListener('click', () => selectImage(btn.dataset.url));
+    });
+  } catch {
+    pickerGrid.innerHTML = '<p style="padding:1rem;color:#c53030">Failed to load images.</p>';
+  }
+};
+
+// Filter picker items by name
+pickerSearch.addEventListener('input', (e) => {
+  const q = e.target.value.toLowerCase();
+  pickerGrid.querySelectorAll('.picker-item').forEach((btn) => {
+    const name = btn.querySelector('span').textContent.toLowerCase();
+    btn.style.display = name.includes(q) ? '' : 'none';
+  });
+});
+
+// Close on backdrop click or close button
+document.getElementById('picker-close').addEventListener('click', () => pickerDialog.close());
+pickerDialog.addEventListener('click', (e) => { if (e.target === pickerDialog) pickerDialog.close(); });
+
+// Wire "Choose from Pokedex" buttons (both forms use data-picker-target attribute)
+document.querySelectorAll('[data-picker-target]').forEach((btn) => {
+  btn.addEventListener('click', () => {
+    pickerTarget = btn.dataset.pickerTarget;
+    openPicker();
+  });
+});
+
+// ─── File upload → base64 ─────────────────────────────────────────────────────
+
+/** Reads a file input and sets the img field + preview to the base64 data URL. */
+const handleFileUpload = (prefix) => {
+  const fileInput = document.getElementById(`${prefix}-img-file`);
+  const file = fileInput.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    document.getElementById(`${prefix}-img`).value = e.target.result;
+    updatePreview(prefix, e.target.result);
+  };
+  reader.readAsDataURL(file);
+};
+
+// Wire "Upload File" buttons (both forms use data-upload-target attribute)
+document.querySelectorAll('[data-upload-target]').forEach((btn) => {
+  const prefix = btn.dataset.uploadTarget;
+  btn.addEventListener('click', () => document.getElementById(`${prefix}-img-file`).click());
+});
+
+document.getElementById('add-img-file').addEventListener('change', () => handleFileUpload('add'));
+document.getElementById('update-img-file').addEventListener('change', () => handleFileUpload('update'));
+
+// ─── Pokemon grid rendering ───────────────────────────────────────────────────
 
 /** Renders a slice of pokemon as cards. */
 const renderCards = (list) => {
@@ -128,6 +239,7 @@ const renderPage = () => {
 
 /** Fetches pokemon from the API with optional filter query params. */
 const fetchPokemon = async (params = {}) => {
+  currentParams = params;
   resultsEl.classList.add('loading');
   resultCountEl.textContent = '';
   paginationEl.innerHTML = '';
@@ -155,6 +267,9 @@ const fetchPokemon = async (params = {}) => {
   }
 };
 
+/** Refreshes the grid using the last-used filter params. */
+const refreshGrid = () => fetchPokemon(currentParams);
+
 /** Populates a <select> element with options from an API array endpoint. */
 const populateSelect = async (selectEl, apiPath, dataKey) => {
   try {
@@ -172,14 +287,16 @@ const populateSelect = async (selectEl, apiPath, dataKey) => {
   }
 };
 
-// --- Highlight active nav link ---
+// ─── Nav ──────────────────────────────────────────────────────────────────────
+
 document.querySelectorAll('header nav a').forEach((link) => {
   if (link.getAttribute('href') === window.location.pathname) {
     link.classList.add('active');
   }
 });
 
-// --- Filter form ---
+// ─── Filter form ──────────────────────────────────────────────────────────────
+
 document.getElementById('filter-form').addEventListener('submit', (e) => {
   e.preventDefault();
   const params = {};
@@ -202,7 +319,8 @@ document.getElementById('filter-clear').addEventListener('click', () => {
   fetchPokemon();
 });
 
-// --- Add pokemon form ---
+// ─── Add pokemon form ─────────────────────────────────────────────────────────
+
 document.getElementById('add-form').addEventListener('submit', async (e) => {
   e.preventDefault();
 
@@ -211,6 +329,7 @@ document.getElementById('add-form').addEventListener('submit', async (e) => {
   const height = document.getElementById('add-height').value.trim();
   const weight = document.getElementById('add-weight').value.trim();
   const weaknesses = parseCSV(document.getElementById('add-weaknesses').value);
+  const img = document.getElementById('add-img').value.trim();
 
   addMsgEl.className = 'msg';
 
@@ -222,7 +341,7 @@ document.getElementById('add-form').addEventListener('submit', async (e) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        name, type, height, weight, weaknesses,
+        name, type, height, weight, weaknesses, img,
       }),
     });
 
@@ -232,6 +351,8 @@ document.getElementById('add-form').addEventListener('submit', async (e) => {
       addMsgEl.textContent = `Added: #${data.num} ${data.name} (id ${data.id})`;
       addMsgEl.classList.add('success');
       document.getElementById('add-form').reset();
+      updatePreview('add', '');
+      refreshGrid();
     } else {
       addMsgEl.textContent = `Error: ${data.error}`;
       addMsgEl.classList.add('error');
@@ -242,7 +363,8 @@ document.getElementById('add-form').addEventListener('submit', async (e) => {
   }
 });
 
-// --- Update form: look up current values before editing ---
+// ─── Update form ──────────────────────────────────────────────────────────────
+
 document.getElementById('lookup-btn').addEventListener('click', async () => {
   const id = document.getElementById('update-id').value.trim();
   updateMsgEl.className = 'msg';
@@ -260,6 +382,7 @@ document.getElementById('lookup-btn').addEventListener('click', async () => {
       updateMsgEl.textContent = `No pokemon found with id ${id}.`;
       updateMsgEl.classList.add('error');
       updateFieldsEl.hidden = true;
+      updateImgActionsEl.hidden = true;
       updateSubmitEl.hidden = true;
       return;
     }
@@ -269,8 +392,11 @@ document.getElementById('lookup-btn').addEventListener('click', async () => {
     document.getElementById('update-type').value = p.type.join(', ');
     document.getElementById('update-height').value = p.height;
     document.getElementById('update-weight').value = p.weight;
+    document.getElementById('update-img').value = p.img || '';
+    updatePreview('update', p.img || '');
 
     updateFieldsEl.hidden = false;
+    updateImgActionsEl.hidden = false;
     updateSubmitEl.hidden = false;
     updateMsgEl.textContent = `Loaded: #${p.num} ${p.name}`;
     updateMsgEl.classList.add('success');
@@ -280,7 +406,6 @@ document.getElementById('lookup-btn').addEventListener('click', async () => {
   }
 });
 
-// --- Update pokemon form ---
 document.getElementById('update-form').addEventListener('submit', async (e) => {
   e.preventDefault();
 
@@ -291,11 +416,13 @@ document.getElementById('update-form').addEventListener('submit', async (e) => {
   const type = document.getElementById('update-type').value.trim();
   const height = document.getElementById('update-height').value.trim();
   const weight = document.getElementById('update-weight').value.trim();
+  const img = document.getElementById('update-img').value.trim();
 
   if (name) body.name = name;
   if (type) body.type = parseCSV(type);
   if (height) body.height = height;
   if (weight) body.weight = weight;
+  body.img = img; // always send img (allows clearing it too)
 
   updateMsgEl.className = 'msg';
 
@@ -313,8 +440,11 @@ document.getElementById('update-form').addEventListener('submit', async (e) => {
       updateMsgEl.textContent = 'Pokemon updated successfully.';
       updateMsgEl.classList.add('success');
       updateFieldsEl.hidden = true;
+      updateImgActionsEl.hidden = true;
       updateSubmitEl.hidden = true;
+      updatePreview('update', '');
       document.getElementById('update-form').reset();
+      refreshGrid();
     } else {
       const data = await res.json();
       updateMsgEl.textContent = `Error: ${data.error}`;
@@ -326,7 +456,8 @@ document.getElementById('update-form').addEventListener('submit', async (e) => {
   }
 });
 
-// --- Init: populate dropdowns then load all pokemon ---
+// ─── Init ─────────────────────────────────────────────────────────────────────
+
 Promise.all([
   populateSelect(filterTypeEl, '/api/types', 'types'),
   populateSelect(filterWeaknessEl, '/api/weaknesses', 'weaknesses'),

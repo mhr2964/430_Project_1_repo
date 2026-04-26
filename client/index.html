@@ -80,6 +80,16 @@
             <input type="text" id="add-weaknesses" placeholder="Ground" />
             <span class="form-hint">Comma-separated</span>
           </label>
+          <label>
+            Image URL
+            <input type="url" id="add-img" placeholder="Or use buttons below" />
+          </label>
+        </div>
+        <div class="img-actions">
+          <img id="add-img-preview" class="img-preview" alt="Preview" hidden />
+          <button type="button" class="secondary" data-picker-target="add">Choose from Pokedex</button>
+          <button type="button" class="secondary" data-upload-target="add">Upload File</button>
+          <input type="file" id="add-img-file" accept="image/*" hidden />
         </div>
         <button type="submit">Add Pokemon</button>
         <p id="add-msg" class="msg"></p>
@@ -115,6 +125,16 @@
             Weight
             <input type="text" id="update-weight" />
           </label>
+          <label>
+            Image URL
+            <input type="url" id="update-img" />
+          </label>
+        </div>
+        <div class="img-actions" id="update-img-actions" hidden>
+          <img id="update-img-preview" class="img-preview" alt="Preview" hidden />
+          <button type="button" class="secondary" data-picker-target="update">Choose from Pokedex</button>
+          <button type="button" class="secondary" data-upload-target="update">Upload File</button>
+          <input type="file" id="update-img-file" accept="image/*" hidden />
         </div>
         <button type="submit" id="update-submit" hidden>Save Changes</button>
         <p id="update-msg" class="msg"></p>
@@ -122,6 +142,16 @@
     </section>
 
   </main>
+
+  <!-- Image picker modal -->
+  <dialog id="img-picker">
+    <div class="picker-header">
+      <h3>Choose a Pokemon Image</h3>
+      <input type="search" id="picker-search" placeholder="Filter by name..." />
+      <button type="button" id="picker-close" class="secondary">Close</button>
+    </div>
+    <div id="picker-grid"></div>
+  </dialog>
 
   <script src="/main.js"></script>
 </body>
