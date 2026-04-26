@@ -1,6 +1,8 @@
 // Populates type/weakness dropdowns from the API on load, then fetches all pokemon.
 
 const resultsEl = document.getElementById('results');
+const resultsScrollEl = document.querySelector('.results-scroll');
+const paginationEl = document.getElementById('pagination');
 const resultCountEl = document.getElementById('result-count');
 const filterNameEl = document.getElementById('filter-name');
 const filterTypeEl = document.getElementById('filter-type');
@@ -10,6 +12,10 @@ const addMsgEl = document.getElementById('add-msg');
 const updateMsgEl = document.getElementById('update-msg');
 const updateFieldsEl = document.getElementById('update-fields');
 const updateSubmitEl = document.getElementById('update-submit');
+
+const PAGE_SIZE = 20;
+let allResults = [];
+let currentPage = 0;
 
 /** Escapes HTML special characters to prevent XSS when interpolating into innerHTML. */
 const esc = (str) => String(str)
@@ -46,10 +52,8 @@ const typeTag = (t) => {
   return `<span class="type-badge" style="background:${color.bg};color:${color.text}">${esc(t)}</span>`;
 };
 
-/** Renders an array of pokemon as cards in the results grid. */
-const renderPokemon = (list) => {
-  resultCountEl.textContent = `Showing ${list.length} pokemon`;
-
+/** Renders a slice of pokemon as cards. */
+const renderCards = (list) => {
   if (list.length === 0) {
     resultsEl.innerHTML = '<p class="empty-msg">No pokemon match the current filters.</p>';
     return;
@@ -69,10 +73,64 @@ const renderPokemon = (list) => {
   `).join('');
 };
 
+/** Renders prev/next pagination controls. Clears them when only one page. */
+const renderPagination = () => {
+  const totalPages = Math.ceil(allResults.length / PAGE_SIZE);
+
+  if (totalPages <= 1) {
+    paginationEl.innerHTML = '';
+    return;
+  }
+
+  paginationEl.innerHTML = `
+    <button type="button" id="prev-page" class="secondary" ${currentPage === 0 ? 'disabled' : ''}>&#8592; Prev</button>
+    <span class="page-info">Page ${currentPage + 1} of ${totalPages}</span>
+    <button type="button" id="next-page" class="secondary" ${currentPage >= totalPages - 1 ? 'disabled' : ''}>Next &#8594;</button>
+  `;
+
+  document.getElementById('prev-page').addEventListener('click', () => {
+    if (currentPage > 0) {
+      currentPage -= 1;
+      renderPage();
+      resultsScrollEl.scrollTop = 0;
+    }
+  });
+
+  document.getElementById('next-page').addEventListener('click', () => {
+    if (currentPage < totalPages - 1) {
+      currentPage += 1;
+      renderPage();
+      resultsScrollEl.scrollTop = 0;
+    }
+  });
+};
+
+/** Slices allResults to the current page and re-renders cards + pagination + count. */
+const renderPage = () => {
+  const totalPages = Math.ceil(allResults.length / PAGE_SIZE);
+  const start = currentPage * PAGE_SIZE;
+  const end = Math.min(start + PAGE_SIZE, allResults.length);
+
+  if (allResults.length === 0) {
+    resultCountEl.textContent = 'Showing 0 pokemon';
+    renderCards([]);
+    paginationEl.innerHTML = '';
+    return;
+  }
+
+  resultCountEl.textContent = totalPages > 1
+    ? `Showing ${start + 1}–${end} of ${allResults.length} pokemon`
+    : `Showing ${allResults.length} pokemon`;
+
+  renderCards(allResults.slice(start, end));
+  renderPagination();
+};
+
 /** Fetches pokemon from the API with optional filter query params. */
 const fetchPokemon = async (params = {}) => {
   resultsEl.classList.add('loading');
   resultCountEl.textContent = '';
+  paginationEl.innerHTML = '';
 
   const qs = new URLSearchParams(params).toString();
   const url = `/api/pokemon${qs ? `?${qs}` : ''}`;
@@ -87,7 +145,9 @@ const fetchPokemon = async (params = {}) => {
     }
 
     const data = await res.json();
-    renderPokemon(data.pokemon);
+    allResults = data.pokemon;
+    currentPage = 0;
+    renderPage();
   } catch {
     resultsEl.innerHTML = '<p class="msg error">Network error — could not reach the server.</p>';
   } finally {
