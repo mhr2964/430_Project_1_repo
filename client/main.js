@@ -268,7 +268,16 @@ const fetchPokemon = async (params = {}) => {
 };
 
 /** Refreshes the grid using the last-used filter params. */
-const refreshGrid = () => fetchPokemon(currentParams);
+/** Refreshes the grid and returns to the same page if it still exists. */
+const refreshGrid = async () => {
+  const savedPage = currentPage;
+  await fetchPokemon(currentParams);
+  const totalPages = Math.ceil(allResults.length / PAGE_SIZE);
+  if (savedPage > 0 && savedPage < totalPages) {
+    currentPage = savedPage;
+    renderPage();
+  }
+};
 
 /** Populates a <select> element with options from an API array endpoint. */
 const populateSelect = async (selectEl, apiPath, dataKey) => {
