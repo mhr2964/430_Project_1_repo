@@ -19,6 +19,7 @@ let allResults = [];
 let currentPage = 0;
 let currentParams = {};  // last-used filter params — used to refresh after add/update
 let pickerTarget = null; // 'add' or 'update' — which form opened the image picker
+let pickerCache = null;  // cached sprite list; cleared after add so new pokemon appear
 
 /** Escapes HTML special characters to prevent XSS when interpolating into innerHTML. */
 const esc = (str) => String(str)
@@ -89,16 +90,20 @@ const selectImage = (url) => {
   pickerDialog.close();
 };
 
-/** Opens the image picker, populating it from the current pokemon dataset. */
+/** Opens the image picker, populating it from the dataset (cached after first load). */
 const openPicker = async () => {
   pickerGrid.innerHTML = '<p style="padding:1rem;color:#718096">Loading sprites…</p>';
   pickerSearch.value = '';
   pickerDialog.showModal();
 
   try {
-    const res = await fetch('/api/pokemon', { headers: { Accept: 'application/json' } });
-    const data = await res.json();
-    const withImages = data.pokemon.filter((p) => p.img);
+    if (!pickerCache) {
+      const res = await fetch('/api/pokemon', { headers: { Accept: 'application/json' } });
+      const data = await res.json();
+      pickerCache = data.pokemon.filter((p) => p.img);
+    }
+
+    const withImages = pickerCache;
 
     pickerGrid.innerHTML = withImages.map((p) => `
       <button type="button" class="picker-item" data-url="${esc(p.img)}" title="${esc(p.name)}">
@@ -267,11 +272,11 @@ const fetchPokemon = async (params = {}) => {
   }
 };
 
-/** Refreshes the grid using the last-used filter params. */
 /** Refreshes the grid and returns to the same page if it still exists. */
 const refreshGrid = async () => {
   const savedPage = currentPage;
   await fetchPokemon(currentParams);
+  pickerCache = null; // invalidate so picker reflects any newly added pokemon
   const totalPages = Math.ceil(allResults.length / PAGE_SIZE);
   if (savedPage > 0 && savedPage < totalPages) {
     currentPage = savedPage;
