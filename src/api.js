@@ -52,6 +52,7 @@ const parseBody = (req) => new Promise((resolve, reject) => {
  * Returns all pokemon. Supports query params:
  *   type     (string)  — filter to pokemon that have this type
  *   weakness (string)  — filter to pokemon that have this weakness
+ *   name     (string)  — filter to pokemon whose name contains this substring (case-insensitive)
  *   limit    (number)  — max number of results to return
  */
 const getPokemon = (req, res, query) => {
@@ -65,6 +66,11 @@ const getPokemon = (req, res, query) => {
   if (query.weakness) {
     const w = query.weakness.toLowerCase();
     results = results.filter((p) => p.weaknesses.some((w2) => w2.toLowerCase() === w));
+  }
+
+  if (query.name) {
+    const n = query.name.toLowerCase();
+    results = results.filter((p) => p.name.toLowerCase().includes(n));
   }
 
   if (query.limit) {
