@@ -33,6 +33,7 @@ let currentPage = 0;
 let currentParams = {};
 let pickerTarget = null;
 let pickerCache = null;
+let fullPokemonCache = null; // all pokemon, used for chain traversal
 
 /** Escapes HTML special characters to prevent XSS when interpolating into innerHTML. */
 const esc = (str) => String(str)
@@ -197,19 +198,59 @@ const fetchAndOpenDetail = async (num) => {
   } catch { /* silently ignore network errors */ }
 };
 
+/** Returns the full pokemon list, fetching once and caching for the session. */
+const getFullPokemon = async () => {
+  if (!fullPokemonCache) {
+    const res = await fetch('/api/pokemon', { headers: { Accept: 'application/json' } });
+    const data = await res.json();
+    fullPokemonCache = data.pokemon;
+  }
+  return fullPokemonCache;
+};
+
 /**
- * Builds the full evolution chain for a pokemon by combining prev + current + next.
- * prev_evolution is ordered base-first; next_evolution is ordered next-first.
+ * Builds the full evolution chain by dataset traversal — works even when the
+ * dataset only stores next_evolution (no prev_evolution on final forms).
+ * Finds the chain root by walking backwards, then follows next_evolution forward.
  */
-const buildChain = (p) => [
-  ...(p.prev_evolution || []),
-  { num: p.num, name: p.name, current: true },
-  ...(p.next_evolution || []),
-];
+const buildFullChain = async (p) => {
+  let all;
+  try {
+    all = await getFullPokemon();
+  } catch {
+    return [{ num: p.num, name: p.name, current: true }];
+  }
+
+  const byNum = new Map(all.map((x) => [x.num, x]));
+
+  // Walk backwards to find the root (base form with no parent)
+  let root = p;
+  const seen = new Set([p.num]);
+  for (;;) {
+    const parent = all.find((x) => x.next_evolution?.some((e) => e.num === root.num));
+    if (!parent || seen.has(parent.num)) break;
+    seen.add(parent.num);
+    root = parent;
+  }
+
+  // Walk forward from root following next_evolution[0] (linear chains only)
+  const chain = [];
+  const walk = (cur) => {
+    chain.push({ ...cur, current: cur.num === p.num });
+    const next = cur.next_evolution?.[0];
+    const nextPokemon = next && byNum.get(next.num);
+    if (nextPokemon && !chain.some((c) => c.num === nextPokemon.num)) {
+      walk(nextPokemon);
+    }
+  };
+  walk(root);
+
+  return chain;
+};
 
 /** Builds and opens the detail modal for a given pokemon object. */
-const openDetail = (p) => {
-  const chain = buildChain(p);
+const openDetail = async (p) => {
+  const chain = await buildFullChain(p);
   const chainHtml = chain.length > 1
     ? `<div class="detail-section">
         <h4>Evolution Chain</h4>
@@ -441,6 +482,7 @@ const refreshGrid = async () => {
   const savedPage = currentPage;
   await fetchPokemon(currentParams);
   pickerCache = null;
+  fullPokemonCache = null;
   const totalPages = Math.ceil(allResults.length / PAGE_SIZE);
   if (savedPage > 0 && savedPage < totalPages) {
     currentPage = savedPage;
