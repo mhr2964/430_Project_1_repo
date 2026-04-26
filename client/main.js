@@ -48,24 +48,8 @@ const TYPE_COLORS = {
   Water: { bg: '#6890F0', text: '#fff' },
 };
 
-// Emoji icon for each type
-const TYPE_EMOJI = {
-  Bug: '🐛',
-  Dragon: '🐉',
-  Electric: '⚡',
-  Fighting: '👊',
-  Fire: '🔥',
-  Flying: '🌪️',
-  Ghost: '👻',
-  Grass: '🌿',
-  Ground: '🌍',
-  Ice: '❄️',
-  Normal: '⭐',
-  Poison: '☠️',
-  Psychic: '🔮',
-  Rock: '🪨',
-  Water: '💧',
-};
+/** URL for the official game-accurate type badge sprite. */
+const typeIconUrl = (type) => `https://play.pokemonshowdown.com/sprites/types/${type}.png`;
 
 /** Returns an HTML span for a type badge with its canonical color (used on cards). */
 const typeTag = (t) => {
@@ -91,15 +75,24 @@ const createTypePicker = (containerId) => {
       const data = await res.json();
 
       data[dataKey].forEach((val) => {
-        const color = TYPE_COLORS[val] || { bg: '#718096', text: '#fff' };
-        const emoji = TYPE_EMOJI[val] || '❓';
         const btn = document.createElement('button');
         btn.type = 'button';
         btn.className = 'type-chip';
-        btn.style.background = color.bg;
-        btn.style.color = color.text;
         btn.dataset.value = val;
-        btn.innerHTML = `<span class="chip-icon">${emoji}</span><span class="chip-name">${esc(val)}</span>`;
+        btn.title = val;
+
+        const img = document.createElement('img');
+        img.src = typeIconUrl(val);
+        img.alt = val;
+        img.className = 'type-icon-img';
+        // Fallback to colored text badge if sprite fails to load
+        img.onerror = () => {
+          const color = TYPE_COLORS[val] || { bg: '#718096', text: '#fff' };
+          btn.style.background = color.bg;
+          btn.style.color = color.text;
+          img.replaceWith(Object.assign(document.createElement('span'), { className: 'chip-name', textContent: val }));
+        };
+        btn.appendChild(img);
 
         btn.addEventListener('click', () => {
           if (selected.has(val)) {
