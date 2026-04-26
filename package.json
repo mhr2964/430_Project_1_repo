@@ -1,0 +1,19 @@
+{
+  "name": "430-project-1",
+  "version": "1.0.0",
+  "description": "IGME 430 Project 1 — Pokemon Web API",
+  "main": "src/server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node src/server.js",
+    "lint": "eslint src/"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.0.0",
+    "eslint": "^9.0.0",
+    "globals": "^15.0.0"
+  }
+}
