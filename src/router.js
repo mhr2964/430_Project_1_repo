@@ -6,6 +6,17 @@ import {
 import { sendError } from './responses.js';
 
 /**
+ * Wraps an async handler call so any unexpected rejection sends a 500
+ * instead of becoming an unhandled Promise rejection that crashes Node.
+ */
+const safeAsync = (promise, req, res) => {
+  promise.catch((err) => {
+    console.error('Unhandled handler error:', err);
+    if (!res.headersSent) sendError(req, res, 500, 'Internal server error');
+  });
+};
+
+/**
  * Routes an incoming HTTP request to the appropriate handler.
  *
  * Static routes: /, /docs, /style.css, /main.js
@@ -47,12 +58,12 @@ const handleRequest = (req, res) => {
 
     if (!subpath) {
       if (method === 'GET' || method === 'HEAD') return getPokemon(req, res, query);
-      if (method === 'POST') return addPokemon(req, res);
+      if (method === 'POST') return safeAsync(addPokemon(req, res), req, res);
       return sendError(req, res, 405, 'Method not allowed');
     }
 
     if (subpath === 'update') {
-      if (method === 'POST') return updatePokemon(req, res);
+      if (method === 'POST') return safeAsync(updatePokemon(req, res), req, res);
       return sendError(req, res, 405, 'Method not allowed');
     }
 
