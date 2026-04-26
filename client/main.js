@@ -197,18 +197,32 @@ const fetchAndOpenDetail = async (num) => {
   } catch { /* silently ignore network errors */ }
 };
 
-/** Renders a list of evolutions as clickable evo-link buttons joined by arrows. */
-const evoLinks = (evos) => evos.map((e) => `
-  <button type="button" class="evo-link" data-num="${esc(e.num)}">${esc(e.name)}</button>
-`).join('<span class="evo-arrow">→</span>');
+/**
+ * Builds the full evolution chain for a pokemon by combining prev + current + next.
+ * prev_evolution is ordered base-first; next_evolution is ordered next-first.
+ */
+const buildChain = (p) => [
+  ...(p.prev_evolution || []),
+  { num: p.num, name: p.name, current: true },
+  ...(p.next_evolution || []),
+];
 
 /** Builds and opens the detail modal for a given pokemon object. */
 const openDetail = (p) => {
-  const evoPrev = p.prev_evolution?.length
-    ? `<div class="detail-section"><h4>Previous Evolution</h4><p>${evoLinks(p.prev_evolution)}</p></div>`
-    : '';
-  const evoNext = p.next_evolution?.length
-    ? `<div class="detail-section"><h4>Evolves Into</h4><p>${evoLinks(p.next_evolution)}</p></div>`
+  const chain = buildChain(p);
+  const chainHtml = chain.length > 1
+    ? `<div class="detail-section">
+        <h4>Evolution Chain</h4>
+        <div class="evo-chain">
+          ${chain.map((e, i) => `
+            ${i > 0 ? '<span class="evo-arrow">→</span>' : ''}
+            ${e.current
+              ? `<span class="evo-current">${esc(e.name)}</span>`
+              : `<button type="button" class="evo-link" data-num="${esc(e.num)}">${esc(e.name)}</button>`
+            }
+          `).join('')}
+        </div>
+      </div>`
     : '';
 
   detailContent.innerHTML = `
@@ -226,8 +240,7 @@ const openDetail = (p) => {
       <div class="stat-box"><span class="stat-label">ID</span><span class="stat-val">${p.id}</span></div>
     </div>
     ${p.weaknesses.length ? `<div class="detail-section"><h4>Weaknesses</h4><div class="type-list">${p.weaknesses.map(typeTag).join('')}</div></div>` : ''}
-    ${evoPrev}
-    ${evoNext}
+    ${chainHtml}
   `;
 
   detailContent.querySelectorAll('.evo-link').forEach((btn) => {
