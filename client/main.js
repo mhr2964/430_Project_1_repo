@@ -12,6 +12,21 @@ const updateFieldsEl = document.getElementById('update-fields');
 const updateImgActionsEl = document.getElementById('update-img-actions');
 const updateSubmitEl = document.getElementById('update-submit');
 
+// Single delegated listener — handles all current and future card clicks without re-attaching per render
+resultsEl.addEventListener('click', (e) => {
+  const card = e.target.closest('.card');
+  if (!card) return;
+  const found = allResults.find((p) => p.id === parseInt(card.dataset.id, 10));
+  if (found) openDetail(found);
+});
+resultsEl.addEventListener('keydown', (e) => {
+  if (e.key !== 'Enter' && e.key !== ' ') return;
+  const card = e.target.closest('.card');
+  if (!card) return;
+  const found = allResults.find((p) => p.id === parseInt(card.dataset.id, 10));
+  if (found) openDetail(found);
+});
+
 const PAGE_SIZE = 20;
 let allResults = [];
 let currentPage = 0;
@@ -29,7 +44,15 @@ const esc = (str) => String(str)
 /** Splits a comma-separated string into a trimmed, non-empty array. */
 const parseCSV = (str) => str.split(',').map((s) => s.trim()).filter(Boolean);
 
-// Classic pokemon type colors
+/** POSTs JSON to a URL with standard Accept/Content-Type headers. */
+const postJSON = (url, body) => fetch(url, {
+  method: 'POST',
+  headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
+  body: JSON.stringify(body),
+});
+
+
+// Type color map keyed by the capitalized type name used in the dataset
 const TYPE_COLORS = {
   Bug: { bg: '#A8B820', text: '#fff' },
   Dragon: { bg: '#7038F8', text: '#fff' },
@@ -231,7 +254,7 @@ const selectImage = (url) => {
 
 /** Opens the image picker, using cached data after first load. */
 const openPicker = async () => {
-  pickerGrid.innerHTML = '<p style="padding:1rem;color:#718096">Loading sprites…</p>';
+  pickerGrid.innerHTML = '<p class="picker-msg">Loading sprites…</p>';
   pickerSearch.value = '';
   pickerDialog.showModal();
 
@@ -253,7 +276,7 @@ const openPicker = async () => {
       btn.addEventListener('click', () => selectImage(btn.dataset.url));
     });
   } catch {
-    pickerGrid.innerHTML = '<p style="padding:1rem;color:#c53030">Failed to load images.</p>';
+    pickerGrid.innerHTML = '<p class="picker-msg picker-msg--error">Failed to load images.</p>';
   }
 };
 
@@ -318,17 +341,6 @@ const renderCards = (list) => {
     : ''}
     </div>
   `).join('');
-
-  // Open detail modal on card click or Enter/Space keypress
-  resultsEl.querySelectorAll('.card').forEach((card) => {
-    const handler = () => {
-      const id = parseInt(card.dataset.id, 10);
-      const found = allResults.find((p) => p.id === id);
-      if (found) openDetail(found);
-    };
-    card.addEventListener('click', handler);
-    card.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') handler(); });
-  });
 };
 
 const renderPagination = () => {
@@ -476,17 +488,9 @@ document.getElementById('add-form').addEventListener('submit', async (e) => {
   }
 
   try {
-    const res = await fetch('/api/pokemon', {
-      method: 'POST',
-      headers: {
-        Accept: 'application/json',
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        name, type, height, weight, weaknesses, img,
-      }),
+    const res = await postJSON('/api/pokemon', {
+      name, type, height, weight, weaknesses, img,
     });
-
     const data = await res.json();
 
     if (res.ok) {
@@ -570,14 +574,7 @@ document.getElementById('update-form').addEventListener('submit', async (e) => {
   updateMsgEl.className = 'msg';
 
   try {
-    const res = await fetch('/api/pokemon/update', {
-      method: 'POST',
-      headers: {
-        Accept: 'application/json',
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(body),
-    });
+    const res = await postJSON('/api/pokemon/update', body);
 
     if (res.status === 204) {
       updateMsgEl.textContent = 'Pokemon updated successfully.';
