@@ -5,9 +5,9 @@ const resultsScrollEl = document.querySelector('.results-scroll');
 const paginationEl = document.getElementById('pagination');
 const resultCountEl = document.getElementById('result-count');
 const filterNameEl = document.getElementById('filter-name');
-const filterTypeEl = document.getElementById('filter-type');
-const filterWeaknessEl = document.getElementById('filter-weakness');
 const filterLimitEl = document.getElementById('filter-limit');
+let selectedType = '';
+let selectedWeakness = '';
 const addMsgEl = document.getElementById('add-msg');
 const updateMsgEl = document.getElementById('update-msg');
 const updateFieldsEl = document.getElementById('update-fields');
@@ -284,20 +284,43 @@ const refreshGrid = async () => {
   }
 };
 
-/** Populates a <select> element with options from an API array endpoint. */
-const populateSelect = async (selectEl, apiPath, dataKey) => {
+/**
+ * Populates a chip container with colored type badge buttons.
+ * Clicking a chip selects it (one at a time); clicking again deselects.
+ * onSelect(value) is called with the selected string, or '' on deselect.
+ */
+const populateTypePicker = async (containerId, apiPath, dataKey, onSelect) => {
   try {
     const res = await fetch(apiPath, { headers: { Accept: 'application/json' } });
     if (!res.ok) return;
     const data = await res.json();
+    const container = document.getElementById(containerId);
+
     data[dataKey].forEach((val) => {
-      const opt = document.createElement('option');
-      opt.value = val;
-      opt.textContent = val;
-      selectEl.appendChild(opt);
+      const color = TYPE_COLORS[val] || { bg: '#718096', text: '#fff' };
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'type-chip';
+      btn.textContent = val;
+      btn.style.background = color.bg;
+      btn.style.color = color.text;
+      btn.dataset.value = val;
+
+      btn.addEventListener('click', () => {
+        const wasSelected = btn.classList.contains('selected');
+        container.querySelectorAll('.type-chip').forEach((c) => c.classList.remove('selected'));
+        if (!wasSelected) {
+          btn.classList.add('selected');
+          onSelect(val);
+        } else {
+          onSelect('');
+        }
+      });
+
+      container.appendChild(btn);
     });
   } catch {
-    // Silently skip dropdown population on network error
+    // Silently skip on network error
   }
 };
 
@@ -315,21 +338,20 @@ document.getElementById('filter-form').addEventListener('submit', (e) => {
   e.preventDefault();
   const params = {};
   const name = filterNameEl.value.trim();
-  const type = filterTypeEl.value;
-  const weakness = filterWeaknessEl.value;
   const limit = filterLimitEl.value.trim();
   if (name) params.name = name;
-  if (type) params.type = type;
-  if (weakness) params.weakness = weakness;
+  if (selectedType) params.type = selectedType;
+  if (selectedWeakness) params.weakness = selectedWeakness;
   if (limit) params.limit = limit;
   fetchPokemon(params);
 });
 
 document.getElementById('filter-clear').addEventListener('click', () => {
   filterNameEl.value = '';
-  filterTypeEl.value = '';
-  filterWeaknessEl.value = '';
   filterLimitEl.value = '';
+  selectedType = '';
+  selectedWeakness = '';
+  document.querySelectorAll('.type-chip.selected').forEach((c) => c.classList.remove('selected'));
   fetchPokemon();
 });
 
@@ -473,7 +495,7 @@ document.getElementById('update-form').addEventListener('submit', async (e) => {
 // ─── Init ─────────────────────────────────────────────────────────────────────
 
 Promise.all([
-  populateSelect(filterTypeEl, '/api/types', 'types'),
-  populateSelect(filterWeaknessEl, '/api/weaknesses', 'weaknesses'),
+  populateTypePicker('type-picker', '/api/types', 'types', (v) => { selectedType = v; }),
+  populateTypePicker('weakness-picker', '/api/weaknesses', 'weaknesses', (v) => { selectedWeakness = v; }),
   fetchPokemon(),
 ]).catch(console.error);

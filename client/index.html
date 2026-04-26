@@ -27,23 +27,19 @@
             <input type="text" id="filter-name" placeholder="e.g. saur" />
           </label>
           <label>
-            Type
-            <select id="filter-type">
-              <option value="">Any</option>
-            </select>
-          </label>
-          <label>
-            Weakness
-            <select id="filter-weakness">
-              <option value="">Any</option>
-            </select>
-          </label>
-          <label>
             Limit
             <input type="number" id="filter-limit" min="1" max="151" placeholder="All" />
           </label>
           <button type="submit">Search</button>
           <button type="button" id="filter-clear" class="secondary">Clear</button>
+        </div>
+        <div class="filter-chips-row">
+          <span class="chips-label">Type</span>
+          <div id="type-picker" class="chips"></div>
+        </div>
+        <div class="filter-chips-row">
+          <span class="chips-label">Weakness</span>
+          <div id="weakness-picker" class="chips"></div>
         </div>
       </form>
       <p id="result-count" class="result-count"></p>

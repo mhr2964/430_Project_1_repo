@@ -112,6 +112,52 @@ button.secondary:hover {
   background: #4a5568;
 }
 
+.filter-chips-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  margin-top: 0.75rem;
+}
+
+.chips-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #2d3748;
+  min-width: 62px;
+  padding-top: 0.18rem;
+  flex-shrink: 0;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.type-chip {
+  padding: 0.15rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  cursor: pointer;
+  border: 2px solid transparent;
+  opacity: 0.55;
+  transition: opacity 0.12s, box-shadow 0.12s, transform 0.1s;
+}
+
+.type-chip:hover {
+  opacity: 0.85;
+}
+
+.type-chip.selected {
+  opacity: 1;
+  border-color: rgba(0,0,0,0.35);
+  box-shadow: 0 0 0 2px white, 0 0 0 4px rgba(0,0,0,0.25);
+  transform: scale(1.08);
+}
+
 .result-count {
   font-size: 0.85rem;
   color: var(--color-gray);
