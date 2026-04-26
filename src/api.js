@@ -50,8 +50,8 @@ const parseBody = (req) => new Promise((resolve, reject) => {
 /**
  * GET/HEAD /api/pokemon
  * Returns all pokemon. Supports query params:
- *   type     (string)  — filter to pokemon that have this type
- *   weakness (string)  — filter to pokemon that have this weakness
+ *   type     (string)  — filter by type; comma-separated for OR match (e.g. Fire,Flying)
+ *   weakness (string)  — filter by weakness; comma-separated for OR match
  *   name     (string)  — filter to pokemon whose name contains this substring (case-insensitive)
  *   limit    (number)  — max number of results to return
  */
@@ -59,13 +59,14 @@ const getPokemon = (req, res, query) => {
   let results = [...pokemon];
 
   if (query.type) {
-    const t = query.type.toLowerCase();
-    results = results.filter((p) => p.type.some((t2) => t2.toLowerCase() === t));
+    // Supports comma-separated multi-type: ?type=Fire,Flying returns OR match
+    const types = query.type.split(',').map((t) => t.toLowerCase().trim());
+    results = results.filter((p) => types.some((t) => p.type.some((t2) => t2.toLowerCase() === t)));
   }
 
   if (query.weakness) {
-    const w = query.weakness.toLowerCase();
-    results = results.filter((p) => p.weaknesses.some((w2) => w2.toLowerCase() === w));
+    const weaknesses = query.weakness.split(',').map((w) => w.toLowerCase().trim());
+    results = results.filter((p) => weaknesses.some((w) => p.weaknesses.some((w2) => w2.toLowerCase() === w)));
   }
 
   if (query.name) {

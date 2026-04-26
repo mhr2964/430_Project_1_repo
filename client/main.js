@@ -1,4 +1,4 @@
-// Populates type/weakness dropdowns from the API on load, then fetches all pokemon.
+// Populates type/weakness chip pickers from the API on load, then fetches all pokemon.
 
 const resultsEl = document.getElementById('results');
 const resultsScrollEl = document.querySelector('.results-scroll');
@@ -6,8 +6,6 @@ const paginationEl = document.getElementById('pagination');
 const resultCountEl = document.getElementById('result-count');
 const filterNameEl = document.getElementById('filter-name');
 const filterLimitEl = document.getElementById('filter-limit');
-let selectedType = '';
-let selectedWeakness = '';
 const addMsgEl = document.getElementById('add-msg');
 const updateMsgEl = document.getElementById('update-msg');
 const updateFieldsEl = document.getElementById('update-fields');
@@ -17,9 +15,9 @@ const updateSubmitEl = document.getElementById('update-submit');
 const PAGE_SIZE = 20;
 let allResults = [];
 let currentPage = 0;
-let currentParams = {};  // last-used filter params — used to refresh after add/update
-let pickerTarget = null; // 'add' or 'update' — which form opened the image picker
-let pickerCache = null;  // cached sprite list; cleared after add so new pokemon appear
+let currentParams = {};
+let pickerTarget = null;
+let pickerCache = null;
 
 /** Escapes HTML special characters to prevent XSS when interpolating into innerHTML. */
 const esc = (str) => String(str)
@@ -50,11 +48,104 @@ const TYPE_COLORS = {
   Water: { bg: '#6890F0', text: '#fff' },
 };
 
-/** Returns an HTML span for a type badge with its canonical color. */
+// Emoji icon for each type
+const TYPE_EMOJI = {
+  Bug: '🐛',
+  Dragon: '🐉',
+  Electric: '⚡',
+  Fighting: '👊',
+  Fire: '🔥',
+  Flying: '🌪️',
+  Ghost: '👻',
+  Grass: '🌿',
+  Ground: '🌍',
+  Ice: '❄️',
+  Normal: '⭐',
+  Poison: '☠️',
+  Psychic: '🔮',
+  Rock: '🪨',
+  Water: '💧',
+};
+
+/** Returns an HTML span for a type badge with its canonical color (used on cards). */
 const typeTag = (t) => {
   const color = TYPE_COLORS[t] || { bg: '#718096', text: '#fff' };
   return `<span class="type-badge" style="background:${color.bg};color:${color.text}">${esc(t)}</span>`;
 };
+
+// ─── Type chip picker factory ──────────────────────────────────────────────────
+
+/**
+ * Creates a multi-select type chip picker bound to a container element.
+ * Returns { load, getSelected, setSelected, clearSelected }.
+ */
+const createTypePicker = (containerId) => {
+  const container = document.getElementById(containerId);
+  const selected = new Set();
+
+  /** Renders all chips from an API array endpoint. */
+  const load = async (apiPath, dataKey) => {
+    try {
+      const res = await fetch(apiPath, { headers: { Accept: 'application/json' } });
+      if (!res.ok) return;
+      const data = await res.json();
+
+      data[dataKey].forEach((val) => {
+        const color = TYPE_COLORS[val] || { bg: '#718096', text: '#fff' };
+        const emoji = TYPE_EMOJI[val] || '❓';
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'type-chip';
+        btn.style.background = color.bg;
+        btn.style.color = color.text;
+        btn.dataset.value = val;
+        btn.innerHTML = `<span class="chip-icon">${emoji}</span><span class="chip-name">${esc(val)}</span>`;
+
+        btn.addEventListener('click', () => {
+          if (selected.has(val)) {
+            selected.delete(val);
+            btn.classList.remove('selected');
+          } else {
+            selected.add(val);
+            btn.classList.add('selected');
+          }
+        });
+
+        container.appendChild(btn);
+      });
+    } catch {
+      // Silently skip on network error
+    }
+  };
+
+  const getSelected = () => [...selected];
+
+  const setSelected = (values) => {
+    selected.clear();
+    container.querySelectorAll('.type-chip').forEach((btn) => {
+      btn.classList.remove('selected');
+      if (values.includes(btn.dataset.value)) {
+        selected.add(btn.dataset.value);
+        btn.classList.add('selected');
+      }
+    });
+  };
+
+  const clearSelected = () => {
+    selected.clear();
+    container.querySelectorAll('.type-chip.selected').forEach((btn) => btn.classList.remove('selected'));
+  };
+
+  return {
+    load, getSelected, setSelected, clearSelected,
+  };
+};
+
+// Instantiate all four pickers
+const filterTypePicker = createTypePicker('type-picker');
+const filterWeaknessPicker = createTypePicker('weakness-picker');
+const addTypePicker = createTypePicker('add-type-picker');
+const updateTypePicker = createTypePicker('update-type-picker');
 
 // ─── Image preview ────────────────────────────────────────────────────────────
 
@@ -70,7 +161,6 @@ const updatePreview = (prefix, url) => {
   }
 };
 
-// Keep preview in sync when user types into the URL field
 ['add', 'update'].forEach((prefix) => {
   document.getElementById(`${prefix}-img`).addEventListener('input', (e) => {
     updatePreview(prefix, e.target.value.trim());
@@ -83,14 +173,13 @@ const pickerDialog = document.getElementById('img-picker');
 const pickerGrid = document.getElementById('picker-grid');
 const pickerSearch = document.getElementById('picker-search');
 
-/** Selects an image URL from the picker and sends it to the correct form. */
 const selectImage = (url) => {
   document.getElementById(`${pickerTarget}-img`).value = url;
   updatePreview(pickerTarget, url);
   pickerDialog.close();
 };
 
-/** Opens the image picker, populating it from the dataset (cached after first load). */
+/** Opens the image picker, using cached data after first load. */
 const openPicker = async () => {
   pickerGrid.innerHTML = '<p style="padding:1rem;color:#718096">Loading sprites…</p>';
   pickerSearch.value = '';
@@ -103,9 +192,7 @@ const openPicker = async () => {
       pickerCache = data.pokemon.filter((p) => p.img);
     }
 
-    const withImages = pickerCache;
-
-    pickerGrid.innerHTML = withImages.map((p) => `
+    pickerGrid.innerHTML = pickerCache.map((p) => `
       <button type="button" class="picker-item" data-url="${esc(p.img)}" title="${esc(p.name)}">
         <img src="${esc(p.img)}" alt="${esc(p.name)}" onerror="this.parentElement.style.display='none'" />
         <span>${esc(p.name)}</span>
@@ -120,7 +207,6 @@ const openPicker = async () => {
   }
 };
 
-// Filter picker items by name
 pickerSearch.addEventListener('input', (e) => {
   const q = e.target.value.toLowerCase();
   pickerGrid.querySelectorAll('.picker-item').forEach((btn) => {
@@ -129,11 +215,9 @@ pickerSearch.addEventListener('input', (e) => {
   });
 });
 
-// Close on backdrop click or close button
 document.getElementById('picker-close').addEventListener('click', () => pickerDialog.close());
 pickerDialog.addEventListener('click', (e) => { if (e.target === pickerDialog) pickerDialog.close(); });
 
-// Wire "Choose from Pokedex" buttons (both forms use data-picker-target attribute)
 document.querySelectorAll('[data-picker-target]').forEach((btn) => {
   btn.addEventListener('click', () => {
     pickerTarget = btn.dataset.pickerTarget;
@@ -143,7 +227,6 @@ document.querySelectorAll('[data-picker-target]').forEach((btn) => {
 
 // ─── File upload → base64 ─────────────────────────────────────────────────────
 
-/** Reads a file input and sets the img field + preview to the base64 data URL. */
 const handleFileUpload = (prefix) => {
   const fileInput = document.getElementById(`${prefix}-img-file`);
   const file = fileInput.files[0];
@@ -157,7 +240,6 @@ const handleFileUpload = (prefix) => {
   reader.readAsDataURL(file);
 };
 
-// Wire "Upload File" buttons (both forms use data-upload-target attribute)
 document.querySelectorAll('[data-upload-target]').forEach((btn) => {
   const prefix = btn.dataset.uploadTarget;
   btn.addEventListener('click', () => document.getElementById(`${prefix}-img-file`).click());
@@ -168,7 +250,6 @@ document.getElementById('update-img-file').addEventListener('change', () => hand
 
 // ─── Pokemon grid rendering ───────────────────────────────────────────────────
 
-/** Renders a slice of pokemon as cards. */
 const renderCards = (list) => {
   if (list.length === 0) {
     resultsEl.innerHTML = '<p class="empty-msg">No pokemon match the current filters.</p>';
@@ -189,7 +270,6 @@ const renderCards = (list) => {
   `).join('');
 };
 
-/** Renders prev/next pagination controls. Clears them when only one page. */
 const renderPagination = () => {
   const totalPages = Math.ceil(allResults.length / PAGE_SIZE);
 
@@ -221,7 +301,6 @@ const renderPagination = () => {
   });
 };
 
-/** Slices allResults to the current page and re-renders cards + pagination + count. */
 const renderPage = () => {
   const totalPages = Math.ceil(allResults.length / PAGE_SIZE);
   const start = currentPage * PAGE_SIZE;
@@ -242,7 +321,6 @@ const renderPage = () => {
   renderPagination();
 };
 
-/** Fetches pokemon from the API with optional filter query params. */
 const fetchPokemon = async (params = {}) => {
   currentParams = params;
   resultsEl.classList.add('loading');
@@ -276,51 +354,11 @@ const fetchPokemon = async (params = {}) => {
 const refreshGrid = async () => {
   const savedPage = currentPage;
   await fetchPokemon(currentParams);
-  pickerCache = null; // invalidate so picker reflects any newly added pokemon
+  pickerCache = null;
   const totalPages = Math.ceil(allResults.length / PAGE_SIZE);
   if (savedPage > 0 && savedPage < totalPages) {
     currentPage = savedPage;
     renderPage();
-  }
-};
-
-/**
- * Populates a chip container with colored type badge buttons.
- * Clicking a chip selects it (one at a time); clicking again deselects.
- * onSelect(value) is called with the selected string, or '' on deselect.
- */
-const populateTypePicker = async (containerId, apiPath, dataKey, onSelect) => {
-  try {
-    const res = await fetch(apiPath, { headers: { Accept: 'application/json' } });
-    if (!res.ok) return;
-    const data = await res.json();
-    const container = document.getElementById(containerId);
-
-    data[dataKey].forEach((val) => {
-      const color = TYPE_COLORS[val] || { bg: '#718096', text: '#fff' };
-      const btn = document.createElement('button');
-      btn.type = 'button';
-      btn.className = 'type-chip';
-      btn.textContent = val;
-      btn.style.background = color.bg;
-      btn.style.color = color.text;
-      btn.dataset.value = val;
-
-      btn.addEventListener('click', () => {
-        const wasSelected = btn.classList.contains('selected');
-        container.querySelectorAll('.type-chip').forEach((c) => c.classList.remove('selected'));
-        if (!wasSelected) {
-          btn.classList.add('selected');
-          onSelect(val);
-        } else {
-          onSelect('');
-        }
-      });
-
-      container.appendChild(btn);
-    });
-  } catch {
-    // Silently skip on network error
   }
 };
 
@@ -339,9 +377,11 @@ document.getElementById('filter-form').addEventListener('submit', (e) => {
   const params = {};
   const name = filterNameEl.value.trim();
   const limit = filterLimitEl.value.trim();
+  const types = filterTypePicker.getSelected();
+  const weaknesses = filterWeaknessPicker.getSelected();
   if (name) params.name = name;
-  if (selectedType) params.type = selectedType;
-  if (selectedWeakness) params.weakness = selectedWeakness;
+  if (types.length > 0) params.type = types.join(',');
+  if (weaknesses.length > 0) params.weakness = weaknesses.join(',');
   if (limit) params.limit = limit;
   fetchPokemon(params);
 });
@@ -349,9 +389,8 @@ document.getElementById('filter-form').addEventListener('submit', (e) => {
 document.getElementById('filter-clear').addEventListener('click', () => {
   filterNameEl.value = '';
   filterLimitEl.value = '';
-  selectedType = '';
-  selectedWeakness = '';
-  document.querySelectorAll('.type-chip.selected').forEach((c) => c.classList.remove('selected'));
+  filterTypePicker.clearSelected();
+  filterWeaknessPicker.clearSelected();
   fetchPokemon();
 });
 
@@ -361,13 +400,19 @@ document.getElementById('add-form').addEventListener('submit', async (e) => {
   e.preventDefault();
 
   const name = document.getElementById('add-name').value.trim();
-  const type = parseCSV(document.getElementById('add-type').value);
+  const type = addTypePicker.getSelected();
   const height = document.getElementById('add-height').value.trim();
   const weight = document.getElementById('add-weight').value.trim();
   const weaknesses = parseCSV(document.getElementById('add-weaknesses').value);
   const img = document.getElementById('add-img').value.trim();
 
   addMsgEl.className = 'msg';
+
+  if (type.length === 0) {
+    addMsgEl.textContent = 'Select at least one type.';
+    addMsgEl.classList.add('error');
+    return;
+  }
 
   try {
     const res = await fetch('/api/pokemon', {
@@ -387,6 +432,7 @@ document.getElementById('add-form').addEventListener('submit', async (e) => {
       addMsgEl.textContent = `Added: #${data.num} ${data.name} (id ${data.id})`;
       addMsgEl.classList.add('success');
       document.getElementById('add-form').reset();
+      addTypePicker.clearSelected();
       updatePreview('add', '');
       refreshGrid();
     } else {
@@ -425,10 +471,10 @@ document.getElementById('lookup-btn').addEventListener('click', async () => {
 
     const p = await res.json();
     document.getElementById('update-name').value = p.name;
-    document.getElementById('update-type').value = p.type.join(', ');
     document.getElementById('update-height').value = p.height;
     document.getElementById('update-weight').value = p.weight;
     document.getElementById('update-img').value = p.img || '';
+    updateTypePicker.setSelected(p.type);
     updatePreview('update', p.img || '');
 
     updateFieldsEl.hidden = false;
@@ -449,16 +495,16 @@ document.getElementById('update-form').addEventListener('submit', async (e) => {
   const body = { id };
 
   const name = document.getElementById('update-name').value.trim();
-  const type = document.getElementById('update-type').value.trim();
+  const type = updateTypePicker.getSelected();
   const height = document.getElementById('update-height').value.trim();
   const weight = document.getElementById('update-weight').value.trim();
   const img = document.getElementById('update-img').value.trim();
 
   if (name) body.name = name;
-  if (type) body.type = parseCSV(type);
+  if (type.length > 0) body.type = type;
   if (height) body.height = height;
   if (weight) body.weight = weight;
-  body.img = img; // always send img (allows clearing it too)
+  body.img = img;
 
   updateMsgEl.className = 'msg';
 
@@ -478,6 +524,7 @@ document.getElementById('update-form').addEventListener('submit', async (e) => {
       updateFieldsEl.hidden = true;
       updateImgActionsEl.hidden = true;
       updateSubmitEl.hidden = true;
+      updateTypePicker.clearSelected();
       updatePreview('update', '');
       document.getElementById('update-form').reset();
       refreshGrid();
@@ -495,7 +542,9 @@ document.getElementById('update-form').addEventListener('submit', async (e) => {
 // ─── Init ─────────────────────────────────────────────────────────────────────
 
 Promise.all([
-  populateTypePicker('type-picker', '/api/types', 'types', (v) => { selectedType = v; }),
-  populateTypePicker('weakness-picker', '/api/weaknesses', 'weaknesses', (v) => { selectedWeakness = v; }),
+  filterTypePicker.load('/api/types', 'types'),
+  filterWeaknessPicker.load('/api/weaknesses', 'weaknesses'),
+  addTypePicker.load('/api/types', 'types'),
+  updateTypePicker.load('/api/types', 'types'),
   fetchPokemon(),
 ]).catch(console.error);

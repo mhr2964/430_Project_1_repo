@@ -59,11 +59,6 @@
             <input type="text" id="add-name" required placeholder="Pikachu" />
           </label>
           <label>
-            Type(s) *
-            <input type="text" id="add-type" required placeholder="Electric" />
-            <span class="form-hint">Comma-separated (e.g. Fire, Flying)</span>
-          </label>
-          <label>
             Height
             <input type="text" id="add-height" placeholder="0.40 m" />
           </label>
@@ -80,6 +75,10 @@
             Image URL
             <input type="url" id="add-img" placeholder="Or use buttons below" />
           </label>
+        </div>
+        <div class="filter-chips-row">
+          <span class="chips-label">Type(s) *</span>
+          <div id="add-type-picker" class="chips"></div>
         </div>
         <div class="img-actions">
           <img id="add-img-preview" class="img-preview" alt="Preview" hidden />
@@ -103,28 +102,29 @@
           </label>
           <button type="button" id="lookup-btn" class="secondary">Look Up</button>
         </div>
-        <div class="form-grid" id="update-fields" hidden>
-          <label>
-            Name
-            <input type="text" id="update-name" />
-          </label>
-          <label>
-            Type(s)
-            <input type="text" id="update-type" />
-            <span class="form-hint">Comma-separated</span>
-          </label>
-          <label>
-            Height
-            <input type="text" id="update-height" />
-          </label>
-          <label>
-            Weight
-            <input type="text" id="update-weight" />
-          </label>
-          <label>
-            Image URL
-            <input type="url" id="update-img" />
-          </label>
+        <div id="update-fields" hidden>
+          <div class="form-grid">
+            <label>
+              Name
+              <input type="text" id="update-name" />
+            </label>
+            <label>
+              Height
+              <input type="text" id="update-height" />
+            </label>
+            <label>
+              Weight
+              <input type="text" id="update-weight" />
+            </label>
+            <label>
+              Image URL
+              <input type="url" id="update-img" />
+            </label>
+          </div>
+          <div class="filter-chips-row">
+            <span class="chips-label">Type(s)</span>
+            <div id="update-type-picker" class="chips"></div>
+          </div>
         </div>
         <div class="img-actions" id="update-img-actions" hidden>
           <img id="update-img-preview" class="img-preview" alt="Preview" hidden />
