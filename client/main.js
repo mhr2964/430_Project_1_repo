@@ -160,6 +160,45 @@ const updatePreview = (prefix, url) => {
   });
 });
 
+// ─── Pokemon detail modal ─────────────────────────────────────────────────────
+
+const detailDialog = document.getElementById('pokemon-detail');
+const detailContent = document.getElementById('detail-content');
+
+/** Builds and opens the detail modal for a given pokemon object. */
+const openDetail = (p) => {
+  const evoPrev = p.prev_evolution?.length
+    ? `<div class="detail-section"><h4>Previous Evolution</h4><p>${esc(p.prev_evolution.map((e) => e.name).join(' → '))}</p></div>`
+    : '';
+  const evoNext = p.next_evolution?.length
+    ? `<div class="detail-section"><h4>Evolves Into</h4><p>${esc(p.next_evolution.map((e) => e.name).join(' → '))}</p></div>`
+    : '';
+
+  detailContent.innerHTML = `
+    <div class="detail-hero">
+      ${p.img ? `<img class="detail-img" src="${esc(p.img)}" alt="${esc(p.name)}" onerror="this.style.display='none'" />` : ''}
+      <div class="detail-header">
+        <p class="detail-num">#${esc(p.num)}</p>
+        <h2 class="detail-name">${esc(p.name)}</h2>
+        <div class="type-list">${p.type.map(typeTag).join('')}</div>
+      </div>
+    </div>
+    <div class="detail-stats">
+      <div class="stat-box"><span class="stat-label">Height</span><span class="stat-val">${esc(p.height)}</span></div>
+      <div class="stat-box"><span class="stat-label">Weight</span><span class="stat-val">${esc(p.weight)}</span></div>
+      <div class="stat-box"><span class="stat-label">ID</span><span class="stat-val">${p.id}</span></div>
+    </div>
+    ${p.weaknesses.length ? `<div class="detail-section"><h4>Weaknesses</h4><div class="type-list">${p.weaknesses.map(typeTag).join('')}</div></div>` : ''}
+    ${evoPrev}
+    ${evoNext}
+  `;
+
+  detailDialog.showModal();
+};
+
+document.getElementById('detail-close').addEventListener('click', () => detailDialog.close());
+detailDialog.addEventListener('click', (e) => { if (e.target === detailDialog) detailDialog.close(); });
+
 // ─── Image picker modal ────────────────────────────────────────────────────────
 
 const pickerDialog = document.getElementById('img-picker');
@@ -250,7 +289,7 @@ const renderCards = (list) => {
   }
 
   resultsEl.innerHTML = list.map((p) => `
-    <div class="card">
+    <div class="card" data-id="${p.id}" role="button" tabindex="0" title="Click for details">
       ${p.img ? `<img class="card-img" src="${esc(p.img)}" alt="${esc(p.name)}" onerror="this.style.display='none'" />` : ''}
       <h3>#${esc(p.num)} ${esc(p.name)}</h3>
       <p class="type-list">${p.type.map(typeTag).join('')}</p>
@@ -261,6 +300,17 @@ const renderCards = (list) => {
     : ''}
     </div>
   `).join('');
+
+  // Open detail modal on card click or Enter/Space keypress
+  resultsEl.querySelectorAll('.card').forEach((card) => {
+    const handler = () => {
+      const id = parseInt(card.dataset.id, 10);
+      const found = allResults.find((p) => p.id === id);
+      if (found) openDetail(found);
+    };
+    card.addEventListener('click', handler);
+    card.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') handler(); });
+  });
 };
 
 const renderPagination = () => {

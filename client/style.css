@@ -351,6 +351,8 @@ input::placeholder { color: var(--text-muted); opacity: 0.7; }
 .card:hover {
   box-shadow: var(--card-shadow-hover);
   transform: translateY(-3px);
+  border-color: var(--accent);
+  cursor: pointer;
 }
 
 .card-img {
@@ -556,6 +558,115 @@ dialog::backdrop { background: rgba(10,13,31,0.6); backdrop-filter: blur(2px); }
   height: 56px;
   object-fit: contain;
   image-rendering: pixelated;
+}
+
+/* ─── Pokemon detail modal ───────────────────────────────────────────────── */
+#pokemon-detail {
+  max-width: 480px;
+  width: 92vw;
+  padding: 1.5rem;
+  border-radius: var(--radius-lg);
+  border: none;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.25), 0 0 0 1px rgba(0,0,0,0.06);
+  position: relative;
+}
+
+#pokemon-detail::backdrop { background: rgba(10,13,31,0.55); backdrop-filter: blur(2px); }
+
+.detail-close {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  padding: 0.3rem 0.6rem;
+  font-size: 0.85rem;
+}
+
+.detail-hero {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  margin-bottom: 1.25rem;
+  padding-bottom: 1.25rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.detail-img {
+  width: 110px;
+  height: 110px;
+  object-fit: contain;
+  image-rendering: pixelated;
+  flex-shrink: 0;
+}
+
+.detail-num {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  letter-spacing: 0.05em;
+  margin-bottom: 0.2rem;
+}
+
+.detail-name {
+  font-size: 1.5rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--text);
+  margin-bottom: 0.5rem;
+  line-height: 1.1;
+}
+
+.detail-name::before { display: none; }
+
+.detail-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.5rem;
+  margin-bottom: 1.1rem;
+}
+
+.stat-box {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 0.6rem 0.5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.2rem;
+}
+
+.stat-label {
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+}
+
+.stat-val {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.detail-section {
+  margin-top: 0.85rem;
+  padding-top: 0.85rem;
+  border-top: 1px solid var(--border);
+}
+
+.detail-section h4 {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  margin-bottom: 0.4rem;
+}
+
+.detail-section p {
+  font-size: 0.875rem;
+  color: var(--text);
 }
 
 /* ─── Docs page ──────────────────────────────────────────────────────────── */
