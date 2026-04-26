@@ -23,6 +23,10 @@
       <form id="filter-form">
         <div class="filter-row">
           <label>
+            Name
+            <input type="text" id="filter-name" placeholder="e.g. saur" />
+          </label>
+          <label>
             Type
             <select id="filter-type">
               <option value="">Any</option>
@@ -42,6 +46,7 @@
           <button type="button" id="filter-clear" class="secondary">Clear</button>
         </div>
       </form>
+      <p id="result-count" class="result-count"></p>
       <div id="results"></div>
     </section>
 
@@ -82,30 +87,33 @@
     <section>
       <h2>Update a Pokemon</h2>
       <form id="update-form">
-        <div class="form-grid">
+        <div class="lookup-row">
           <label>
             Pokemon ID *
             <input type="number" id="update-id" required min="1" placeholder="25" />
           </label>
+          <button type="button" id="lookup-btn" class="secondary">Look Up</button>
+        </div>
+        <div class="form-grid" id="update-fields" hidden>
           <label>
-            New Name
-            <input type="text" id="update-name" placeholder="Leave blank to keep" />
+            Name
+            <input type="text" id="update-name" />
           </label>
           <label>
-            New Type(s)
-            <input type="text" id="update-type" placeholder="Leave blank to keep" />
+            Type(s)
+            <input type="text" id="update-type" />
             <span class="form-hint">Comma-separated</span>
           </label>
           <label>
-            New Height
-            <input type="text" id="update-height" placeholder="Leave blank to keep" />
+            Height
+            <input type="text" id="update-height" />
           </label>
           <label>
-            New Weight
-            <input type="text" id="update-weight" placeholder="Leave blank to keep" />
+            Weight
+            <input type="text" id="update-weight" />
           </label>
         </div>
-        <button type="submit">Update Pokemon</button>
+        <button type="submit" id="update-submit" hidden>Save Changes</button>
         <p id="update-msg" class="msg"></p>
       </form>
     </section>

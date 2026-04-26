@@ -39,7 +39,8 @@ header nav a {
   padding-bottom: 2px;
 }
 
-header nav a:hover {
+header nav a:hover,
+header nav a.active {
   border-bottom-color: white;
 }
 
@@ -111,12 +112,32 @@ button.secondary:hover {
   background: #4a5568;
 }
 
+.result-count {
+  font-size: 0.85rem;
+  color: var(--color-gray);
+  margin-top: 0.75rem;
+  min-height: 1.2em;
+}
+
 /* Pokemon grid */
 #results {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
   gap: 1rem;
-  margin-top: 1rem;
+  margin-top: 0.5rem;
+  min-height: 2rem;
+}
+
+#results.loading::after {
+  content: 'Loading...';
+  color: var(--color-gray);
+  font-style: italic;
+  grid-column: 1 / -1;
+}
+
+.empty-msg {
+  color: var(--color-gray);
+  grid-column: 1 / -1;
 }
 
 .card {
@@ -124,6 +145,36 @@ button.secondary:hover {
   border: 1px solid #fed7d7;
   border-radius: 8px;
   padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.card-img {
+  width: 80px;
+  height: 80px;
+  object-fit: contain;
+  margin-bottom: 0.5rem;
+  image-rendering: pixelated;
+}
+
+.type-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  justify-content: center;
+  margin-bottom: 0.35rem;
+}
+
+.type-badge {
+  display: inline-block;
+  padding: 0.1rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
 }
 
 .card h3 {
@@ -136,9 +187,33 @@ button.secondary:hover {
   font-size: 0.82rem;
   color: #4a5568;
   margin-bottom: 0.25rem;
+  text-align: center;
 }
 
 /* Forms */
+.lookup-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.lookup-row label {
+  display: flex;
+  flex-direction: column;
+  font-size: 0.85rem;
+  font-weight: 600;
+  gap: 0.25rem;
+}
+
+.lookup-row input {
+  padding: 0.4rem 0.6rem;
+  border: 1px solid #cbd5e0;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  width: 100px;
+}
+
 .form-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
