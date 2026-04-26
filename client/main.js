@@ -266,8 +266,10 @@ const openDetail = async (p) => {
       </div>`
     : '';
 
+  const heroColor = TYPE_COLORS[p.type[0]]?.bg || '#cc0000';
+
   detailContent.innerHTML = `
-    <div class="detail-hero">
+    <div class="detail-hero" style="background: linear-gradient(135deg, ${heroColor}28 0%, ${heroColor}08 100%)">
       ${p.img ? `<img class="detail-img" src="${esc(p.img)}" alt="${esc(p.name)}" onerror="this.style.display='none'" />` : ''}
       <div class="detail-header">
         <p class="detail-num">#${esc(p.num)}</p>
@@ -383,8 +385,10 @@ const renderCards = (list) => {
     return;
   }
 
-  resultsEl.innerHTML = list.map((p) => `
-    <div class="card" data-id="${p.id}" role="button" tabindex="0" title="Click for details">
+  resultsEl.innerHTML = list.map((p) => {
+    const typeColor = TYPE_COLORS[p.type[0]]?.bg || '#a0a0a0';
+    return `
+    <div class="card" style="--type-color:${typeColor}" data-id="${p.id}" role="button" tabindex="0" title="Click for details">
       ${p.img ? `<img class="card-img" src="${esc(p.img)}" alt="${esc(p.name)}" onerror="this.style.display='none'" />` : ''}
       <h3>#${esc(p.num)} ${esc(p.name)}</h3>
       <p class="type-list">${p.type.map(typeTag).join('')}</p>
@@ -394,7 +398,8 @@ const renderCards = (list) => {
     ? `<p><strong>Evolves to:</strong> ${esc(p.next_evolution.map((e) => e.name).join(' → '))}</p>`
     : ''}
     </div>
-  `).join('');
+  `;
+  }).join('');
 };
 
 const renderPagination = () => {
