@@ -247,7 +247,7 @@ const openDetail = (p) => {
     btn.addEventListener('click', () => fetchAndOpenDetail(btn.dataset.num));
   });
 
-  detailDialog.showModal();
+  if (!detailDialog.open) detailDialog.showModal();
 };
 
 document.getElementById('detail-close').addEventListener('click', () => detailDialog.close());
