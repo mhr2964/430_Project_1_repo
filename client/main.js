@@ -165,13 +165,27 @@ const updatePreview = (prefix, url) => {
 const detailDialog = document.getElementById('pokemon-detail');
 const detailContent = document.getElementById('detail-content');
 
+/** Fetches a pokemon by num string and opens its detail modal. */
+const fetchAndOpenDetail = async (num) => {
+  try {
+    const res = await fetch(`/api/pokemon/${num}`, { headers: { Accept: 'application/json' } });
+    if (!res.ok) return;
+    openDetail(await res.json());
+  } catch { /* silently ignore network errors */ }
+};
+
+/** Renders a list of evolutions as clickable evo-link buttons joined by arrows. */
+const evoLinks = (evos) => evos.map((e) => `
+  <button type="button" class="evo-link" data-num="${esc(e.num)}">${esc(e.name)}</button>
+`).join('<span class="evo-arrow">→</span>');
+
 /** Builds and opens the detail modal for a given pokemon object. */
 const openDetail = (p) => {
   const evoPrev = p.prev_evolution?.length
-    ? `<div class="detail-section"><h4>Previous Evolution</h4><p>${esc(p.prev_evolution.map((e) => e.name).join(' → '))}</p></div>`
+    ? `<div class="detail-section"><h4>Previous Evolution</h4><p>${evoLinks(p.prev_evolution)}</p></div>`
     : '';
   const evoNext = p.next_evolution?.length
-    ? `<div class="detail-section"><h4>Evolves Into</h4><p>${esc(p.next_evolution.map((e) => e.name).join(' → '))}</p></div>`
+    ? `<div class="detail-section"><h4>Evolves Into</h4><p>${evoLinks(p.next_evolution)}</p></div>`
     : '';
 
   detailContent.innerHTML = `
@@ -192,6 +206,10 @@ const openDetail = (p) => {
     ${evoPrev}
     ${evoNext}
   `;
+
+  detailContent.querySelectorAll('.evo-link').forEach((btn) => {
+    btn.addEventListener('click', () => fetchAndOpenDetail(btn.dataset.num));
+  });
 
   detailDialog.showModal();
 };
